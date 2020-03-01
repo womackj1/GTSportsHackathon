@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>XR Buzz</title>
+    <meta charset="utf-8">
+
+
+    <!-- import the webpage's javascript files -->
+    <link rel="stylesheet" type="text/css" media="" href="style.css">
+    <script src="https://aframe.io/releases/1.0.3/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-extras@3.3.0/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.1.0/dist/aframe-environment-component.min.js"></script>
+      <script type="text/javascript" src="ocr.json"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+  </head>
+  <body>
+
+  <button id="cam1">Corner 1</button>
+  <button id="cam3">Corner 2</button>
+  <button id="cam2">Sky</button>
+  <button id="cam4">Scrimmage</button>
+  <button id="nextPlay">nextPlay</button>
+
+  <div class="box">
+      <h1 id="score">Score: </h1>
+      <h1 id="qtr">QTR: </h1>
+      <h1 id="time">Time:</h1>
+      <h1 id="position">Position:</h1>
+      <h1 id="down">Down:</h1>
+  </div>
+
+
+  <script>
+      let currentPlay = 0;
+      let files= ["response1.json","response2.json","response3.json","response4.json","response5.json"];
+      let playerPositions = [
+          [[[-3.157, 2.000], [3.369, 2.000], [-8.499, 2.000], [8.593, 2.000], [9.842, 12.549], [0.491, 22.591], [-5.219, 8.409], [4.811, 7.156], [-17.761, 7.931], [26.380, 7.934], [-7.020, 19.288]], [[0.084, -1.119], [4.504, -2.258], [-3.908, -2], [8.772, -4.971], [-7.999, -2], [7.000, -3.858], [-14.349, -4.892], [27.732, -3.743], [-17.676, -2.537], [3.633, -11.366], [-2.068, -9.776]]],
+          [[[0.000, 3.124], [7.000, 3.676], [-7.000, 2], [13.990, 2], [-25.279, 13.202], [16.424, 7.95], [3.239, 9.47], [30.049, 6.955], [-5.849, 11.035], [22.032, 15.026], [-17.076, 17.858]], [[-0.880, -1.942], [3.807, -2.921], [-4.174, -2.313], [6.687, -2.767], [-8.572, -2.43], [23.601, -6], [-21.798, -2.035], [30.269, -2.243], [-26.997, -6], [2.993, -10.025], [-0.207, -7.73]]],
+          [[[-0.276, 2.968], [5.464, 3.189], [-5.819, 2.955], [27.743, 2], [-11.076, 2.128], [13.253, 6.105], [-2.487, 8.217], [20.110, 17.683], [-21.811, 6], [4.509, 7.658], [-8.006, 16.672]], [[-2.213, -0.637], [0.527, -1.298], [-6.108, -2.056], [3.806, -2.11], [-25.563, -1.586], [20.895, -8.368], [2.610, -6.588], [24.982, -5.547], [-9.500, -2.258], [1.092,-11.856], [-4.156, -10.503]]],
+          [[[0, 2], [7, 2], [-7, 2], [14, 2], [-14, 2], [7, 6], [-7, 6], [14, 6], [-14, 6], [7, 10], [-7, 10]], [[0, -2], [7, -2], [-7, -2], [14, -2], [-14, -2], [7, -6], [-7, -6], [14, -6], [-14, -6], [7, -10], [-7, -10]]],
+          [[[0, 2], [7, 2], [-7, 2], [14, 2], [-14, 2], [7, 6], [-7, 6], [14, 6], [-14, 6], [7, 10], [-7, 10]], [[0, -2], [7, -2], [-7, -2], [14, -2], [-14, -2], [7, -6], [-7, -6], [14, -6], [-14, -6], [7, -10], [-7, -10]]]
+      ];
+
+
+      function selectCam1() {
+          let rig = document.getElementById("camera1");
+          rig.setAttribute('camera', 'active', true);
+      }
+      function selectCam2() {
+          let rig = document.getElementById("camera2");
+          rig.setAttribute('camera', 'active', true);
+      }
+      function selectCam3() {
+          let rig = document.getElementById("camera3");
+          rig.setAttribute('camera', 'active', true);
+      }
+      function selectCam4() {
+          let rig = document.getElementById("camera4");
+          rig.setAttribute('camera', 'active', true);
+      }
+      function updatePositions() {
+          let lineOfScrimmage = 0;
+          loadJSON(function(response) {
+              // Parse JSON string into object
+              var actual_JSON = JSON.parse(response);
+              let ocr = actual_JSON.fullTextAnnotation.text;
+              var indices = [];
+              for(var i=0; i<ocr.length;i++) {
+                  if (ocr[i] === "\n") {
+                      indices.push(i);
+                  }
+              }
+              let priorIndice = 0;
+              let info = [];
+              indices.forEach(element => {
+                      info.push(ocr.substring(priorIndice, element).replace("\n","").replace(".",""));
+                      priorIndice = element;
+                  }
+              );
+              lineOfScrimmage = info[4].slice(-3);
+              document.getElementById("score").innerText = "Score: " + info[2];
+              document.getElementById("qtr").innerText = "QTR: " + info[0];
+              document.getElementById("time").innerText = "Time: " + info[1];
+              document.getElementById("position").innerText = "Position: " + info[4];
+              document.getElementById("down").innerText = "Down: " + info[3];
+          });
+
+          setTimeout(function () {
+              let j = 0; //Team
+              while(j < 2) {
+                  let i = 0; //Player
+                  while (i < 11) {
+                      if(j == 1) {//For Yellow Team
+                          document.getElementById("p" + (j + 1) + (i + 1)).setAttribute("position", {
+                              x: playerPositions[currentPlay - 1][j][i][0],
+                              y: 0,
+                              z: (51 - parseInt(lineOfScrimmage) - playerPositions[currentPlay - 1][j][i][1])
+                          });
+                      }
+                      if(j == 0) {//For Red Team
+                          document.getElementById("p" + (j + 1) + (i + 1)).setAttribute("position", {
+                              x: playerPositions[currentPlay - 1][j][i][0],
+                              y: 0,
+                              z: (51 - parseInt(lineOfScrimmage) - playerPositions[currentPlay - 1][j][i][1])
+                          });
+                      }
+                      i += 1;
+                  }
+                  j += 1;
+              }
+              let linString = 51 - parseInt(lineOfScrimmage) - .5;
+              let rig = document.getElementById("rig4");
+              rig.setAttribute("position", {
+                  x: 0,
+                  y: 15,
+                  z: linString + 25
+              });
+              console.log(linString);
+              document.getElementById("lineS").setAttribute('position',{
+                  x:0,
+                  y:.1,
+                  z: linString
+              });
+          }, 5000);
+          currentPlay += 1
+      }
+
+      function loadJSON(callback) {
+          var xobj = new XMLHttpRequest();
+          xobj.overrideMimeType("application/json");
+          xobj.open('GET',  files[currentPlay], true); // Replace 'my_data' with the path to your file
+          xobj.onreadystatechange = function () {
+              if (xobj.readyState == 4 && xobj.status == "200") {
+                  // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+                  callback(xobj.responseText);
+              }
+          };
+          xobj.send(null);
+      }
+
+
+
+      function next() {
+          if(currentPlay < 5) {
+              updatePositions();
+          }
+      }
+
+      var cam1 = document.getElementById("cam1");
+      cam1.addEventListener("click", function() {
+      // var location = getLocation();
+          selectCam1();
+      }, false);
+      var cam2 = document.getElementById("cam2");
+      cam2.addEventListener("click", function() {
+          // var location = getLocation();
+          selectCam2();
+      }, false);
+      var cam3 = document.getElementById("cam3");
+      cam3.addEventListener("click", function() {
+          // var location = getLocation();
+          selectCam3();
+      }, false);
+      var cam4 = document.getElementById("cam4");
+      cam4.addEventListener("click", function() {
+          // var location = getLocation();
+          selectCam4();
+      }, false);
+      var nextPlay = document.getElementById("nextPlay");
+      nextPlay.addEventListener("click", function() {
+          // var location = getLocation();
+          next();
+      }, false);
+  </script>
+  <a-scene>
+      <a-assets>
+        <a-asset-item id="buzz" src="Buzz.glb"></a-asset-item>
+        <a-asset-item id="player" src="football.glb"></a-asset-item>
+        <a-asset-item id="stadium" src="stadium.glb"></a-asset-item>
+      </a-assets>
+
+      <a-sky color="#35D1FF"></a-sky>
+      <a-entity id="rig1" position="31.312 30 51.031" rotation="-45 45 0">
+          <a-entity id="camera1" camera="active: true" wasd-controls></a-entity>
+      </a-entity>
+      <a-entity id="rig2" position="0 50 0" rotation="-90 90 0">
+          <a-entity id="camera2" camera="active: false" wasd-controls></a-entity>
+      </a-entity>
+      <a-entity id="rig3" position="-37.332 30 -57.236" rotation="0 135 45">
+          <a-entity id="camera3" camera="active: false" wasd-controls></a-entity>
+      </a-entity>
+      <a-entity id="rig4" position="0 12 20" rotation="-15 0 0">
+          <a-entity id="camera4" camera="active: false" wasd-controls></a-entity>
+      </a-entity>
+
+
+      <a-plane position="0 0 0" rotation="90 0 90" color="#026c45" height="80" width="101" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 0" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 10" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 20" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 30" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 40" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 51" rotation="90 0 90" color="white" height="78" width="1" material="side: double">
+      </a-plane>
+      <a-plane position="0 0 56" rotation="90 0 90" color="yellow" height="78" width="10" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 -10" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 -20" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 -30" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 -40" rotation="90 0 90" color="white" height="75" width=".5" material="side: double">
+      </a-plane>
+      <a-plane position="0 .1 -51" rotation="90 0 90" color="white" height="78" width="1" material="side: double">
+      </a-plane>
+      <a-plane position="0 0 -56" rotation="90 0 90" color="yellow" height="78" width="10" material="side: double">
+      </a-plane>
+
+      <a-plane id="lineS" position="0 0 0" rotation="90 0 90" color="blue" height="75" width=".5" material="side: double">
+      </a-plane>
+
+
+      <a-text value="Georgia Tech" color ="black" width="100" position="-14 1 -56" rotation="-90 90 -90"></a-text>
+      <a-text value="Sports Hackathon" color="black" width="100" position="-18 1 56" rotation="-90 90 -90"></a-text>
+
+      <a-text value="50" color ="white" width="100" position="35 .1 3" rotation="-90 90 0"></a-text>
+      <a-text value="40" color ="white" width="100" position="35 .1 13" rotation="-90 90 0"></a-text>
+      <a-text value="30" color ="white" width="100" position="35 .1 23" rotation="-90 90 0"></a-text>
+      <a-text value="20" color ="white" width="100" position="35 .1 33" rotation="-90 90 0"></a-text>
+      <a-text value="10" color ="white" width="100" position="35 .1 43" rotation="-90 90 0"></a-text>
+      <a-text value="40" color ="white" width="100" position="35 .1 -7" rotation="-90 90 0"></a-text>
+      <a-text value="30" color ="white" width="100" position="35 .1 -17" rotation="-90 90 0"></a-text>
+      <a-text value="20" color ="white" width="100" position="35 .1 -27" rotation="-90 90 0"></a-text>
+      <a-text value="10" color ="white" width="100" position="35 .1 -37" rotation="-90 90 0"></a-text>
+
+      <a-text value="50" color ="white" width="100" position="-35 .1 -3" rotation="-90 90 180"></a-text>
+      <a-text value="40" color ="white" width="100" position="-35 .1 -13" rotation="-90 90 180"></a-text>
+      <a-text value="30" color ="white" width="100" position="-35 .1 -23" rotation="-90 90 180"></a-text>
+      <a-text value="20" color ="white" width="100" position="-35 .1 -33" rotation="-90 90 180"></a-text>
+      <a-text value="10" color ="white" width="100" position="-35 .1 -43" rotation="-90 90 180"></a-text>
+      <a-text value="40" color ="white" width="100" position="-35 .1 7" rotation="-90 90 180"></a-text>
+      <a-text value="30" color ="white" width="100" position="-35 .1 17" rotation="-90 90 180"></a-text>
+      <a-text value="20" color ="white" width="100" position="-35 .1 27" rotation="-90 90 180"></a-text>
+      <a-text value="10" color ="white" width="100" position="-35 .1 37" rotation="-90 90 180"></a-text>
+
+      <!-- Using the asset management system. -->
+      <a-entity id="p11" gltf-model="redPlayer.glb" position="0 0 -2" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p12" gltf-model="redPlayer.glb" position="7 0 -2" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p13" gltf-model="redPlayer.glb" position="-7 0 -2" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p14" gltf-model="redPlayer.glb" position="14 0 -2" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p15" gltf-model="redPlayer.glb" position="-14 0 -2" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p16" gltf-model="redPlayer.glb" position="7 0 -6" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p17" gltf-model="redPlayer.glb" position="-7 0 -6" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p18" gltf-model="redPlayer.glb" position="14 0 -6" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p19" gltf-model="redPlayer.glb" position="-14 0 -6" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p110" gltf-model="redPlayer.glb" position="7 0 -10" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p111" gltf-model="redPlayer.glb" position="-7 0 -10" rotation="0 0 0" scale=".1 .1 .1"></a-entity>
+
+      <a-entity id="p21" gltf-model="yellowPlayer.glb" position="0 0 2" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p22" gltf-model="yellowPlayer.glb" position="7 0 2" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p23" gltf-model="yellowPlayer.glb" position="-7 0 2" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p24" gltf-model="yellowPlayer.glb" position="14 0 2" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p25" gltf-model="yellowPlayer.glb" position="-14 0 2" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p26" gltf-model="yellowPlayer.glb" position="7 0 6" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p27" gltf-model="yellowPlayer.glb" position="-7 0 6" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p28" gltf-model="yellowPlayer.glb" position="14 0 6" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p29" gltf-model="yellowPlayer.glb" position="-14 0 6" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p210" gltf-model="yellowPlayer.glb" position="7 0 10" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+      <a-entity id="p211" gltf-model="yellowPlayer.glb" position="-7 0 10" rotation="0 180 0" scale=".1 .1 .1"></a-entity>
+
+      <!--<a-entity gltf-model="Buzz.glb" position="0 20 10"></a-entity>-->
+      <!--<a-light color="white" intensity="1" position="0 15 0"></a-light>-->
+      <!--<a-light type="ambient" intensity="5" color="#222"></a-light>-->
+      <!--<a-light color="white" intensity=".5" position="-1 1 0"></a-light>-->
+
+      <a-entity gltf-model="stadium.glb" position="13.869 -2 115.564" rotation="0 4 0" scale="1 1 1.1"></a-entity>
+      <!-- Defining the URL inline. Not recommended but more comfortable for web developers. -->
+      <!--<a-gltf-model src="tree.gltf"></a-gltf-model>-->
+    </a-scene>
+
+
+      <!-- Environment for 2D and VR viewing. It's auto-hidden in AR mode. -->
+
+
+
+
+      <!-- This shadow-receiving plane is only visible in AR mode. -->
+    </a-scene>
+
+  <script>
+      document.getElementById("camera3").setAttribute('rotation', { x:0, y: 90, z: 0});
+  </script>
+
+    <!-- include the Glitch button to show what the webpage is about and
+          to make it easier for folks to view source and remix -->
+    <!--<div class="glitchButton" style="position:fixed;top:20px;right:20px;"></div>-->
+    <!--<script src="https://button.glitch.me/button.js"></script>-->
+  </body>
+</html>
